@@ -133,7 +133,7 @@ def run_program():
             lines = file.read().split(",")
     profile_dir = lines[0]
     if len(lines) > 1 and lines[1] != "":
-        offset = int(lines[1])
+        offset = int(lines[1].replace("\x00", ""))
     else:
         offset = 0
     # TODO add alternative for chrome?
