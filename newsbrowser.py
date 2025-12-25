@@ -1,10 +1,16 @@
 # import pickle
+import selenium.common.exceptions
+from selenium.common import NoSuchElementException, TimeoutException
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service as FirefoxService
 #from webdriver_manager.firefox import GeckoDriverManager
+from selenium.webdriver.support import expected_conditions as EC
 import time
 import sys
 import os
+
+from selenium.webdriver.support.wait import WebDriverWait
 
 
 #
@@ -19,6 +25,27 @@ import os
 
 #         for cookie in cookies:
 #             driver.add_cookie(cookie)
+
+def accept_cookies(driver):
+    # In case cookies for some reason reset
+    try:
+        wait = WebDriverWait(driver, 1)
+        button_def = (By.XPATH, "//button[text()='Tillåt alla cookies']")
+        button = wait.until(EC.element_to_be_clickable(button_def))
+        button.click()
+        print("Clicked cookie")
+        time.sleep(1)
+    except (NoSuchElementException, TimeoutException):
+        try:
+            wait = WebDriverWait(driver, 1)
+            button_def = (By.XPATH, "//button[text()='Allow all cookies']")
+            button = wait.until(EC.element_to_be_clickable(button_def))
+            button.click()
+            print("Clicked cookie")
+            time.sleep(1)
+        except (NoSuchElementException, TimeoutException):
+            print("No cookie option")
+            pass
 
 def main():
     try:
@@ -105,30 +132,44 @@ def run_program():
         with open("vars.txt", "r") as file:
             lines = file.read().split(",")
     profile_dir = lines[0]
-    if len(lines) > 1:
+    if len(lines) > 1 and lines[1] != "":
         offset = int(lines[1])
     else:
         offset = 0
-    # TODO change path
     # TODO add alternative for chrome?
-    # profile_dir = "/Users/william/Library/Application Support/Firefox/Profiles/zkr8w5jt.default-release"
+    #profile_dir = "/Users/william/Library/Application Support/Firefox/Profiles/megaserver-local"
     options = webdriver.FirefoxOptions()
     options.add_argument("-profile")
     # options.add_argument("-headless")
     options.add_argument(profile_dir)
     driver = webdriver.Firefox(options=options)
 
-    # TODO change value to find wanted monitor. 1000 should be offset per monitor from center monitor
-    if offset != 0:
-        driver.set_window_position(offset, 0)
+    # find wanted monitor. 1000 should be offset per monitor from center monitor
     driver.maximize_window()
+    driver.set_window_position(offset, 0)
     driver.implicitly_wait(2)
 
+    counter = 0
+    waiting_time = 10
+
     while True:
-        curr_url = urls.pop(0)
-        driver.get(curr_url)
-        urls.append(curr_url)
-        time.sleep(15)
+        try:
+            curr_url = urls.pop(0)
+            driver.get(curr_url)
+            urls.append(curr_url)
+            print(counter)
+            if counter < len(urls): # check that every site is visited once (should fix cookies always)
+                accept_cookies(driver)
+                counter += 1
+
+                time.sleep(waiting_time - 3)
+            else:
+                time.sleep(waiting_time)
+
+        except:
+            print("Window closed")
+            driver.quit()
+            break
     # driver.get(urls[0])
     # foo = input()
     # save_cookie(driver, '/Users/william/PycharmProjects/random_smaller_stuff/cookies')
